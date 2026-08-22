@@ -1,0 +1,57 @@
+import importlib
+
+try:
+    st = importlib.import_module("streamlit")
+except ModuleNotFoundError as exc:
+    raise RuntimeError(
+        "Streamlit is required to run this app. Install it with: pip install streamlit"
+    ) from exc
+import numpy as np
+try:
+    pd = importlib.import_module("pandas")
+except ModuleNotFoundError as exc:
+    raise RuntimeError(
+        "Pandas is required to run this app. Install it with: pip install pandas"
+    ) from exc
+load_iris = importlib.import_module("sklearn.datasets").load_iris
+RandomForestClassifier = importlib.import_module(
+    "sklearn.ensemble"
+).RandomForestClassifier
+
+st.set_page_config(page_title="AI-Powered Iris Predictor", page_icon="🌸")
+st.title("🌸 AI-Enhanced Iris Flower Classifier")
+st.write("This interactive web app uses a Machine Learning model trained to classify Iris flowers based on user input parameters.")
+
+@st.cache_data
+def load_data_and_model():
+    iris = load_iris()
+    X = iris.data
+    y = iris.target
+    model = RandomForestClassifier(random_state=42)
+    model.fit(X, y)
+    return iris, model
+
+iris, model = load_data_and_model()
+
+st.sidebar.header("Input Feature Measurements")
+sepal_length = st.sidebar.slider("Sepal Length (cm)", float(iris.data[:, 0].min()), float(iris.data[:, 0].max()), 5.4)
+sepal_width = st.sidebar.slider("Sepal Width (cm)", float(iris.data[:, 1].min()), float(iris.data[:, 1].max()), 3.4)
+petal_length = st.sidebar.slider("Petal Length (cm)", float(iris.data[:, 2].min()), float(iris.data[:, 2].max()), 1.4)
+petal_width = st.sidebar.slider("Petal Width (cm)", float(iris.data[:, 3].min()), float(iris.data[:, 3].max()), 0.2)
+
+input_data = np.array([[sepal_length, sepal_width, petal_length, petal_width]])
+
+st.subheader("Selected Features")
+input_df = pd.DataFrame(input_data, columns=iris.feature_names)
+st.dataframe(input_df)
+
+if st.button("Predict Species"):
+    prediction = model.predict(input_data)[0]
+    predicted_species = iris.target_names[prediction]
+    probabilities = model.predict_proba(input_data)[0]
+    
+    st.success(f"**Predicted Species:** {predicted_species.capitalize()}")
+    
+    st.subheader("Prediction Confidence")
+    prob_df = pd.DataFrame({'Species': iris.target_names, 'Probability': probabilities})
+    st.bar_chart(prob_df.set_index('Species'))
